@@ -817,7 +817,7 @@ async def test(
 if __name__ == "__main__":
     command = "open youtube and play a song by shakira"
     command = "use open_app to open the settings and search for the battery and enter the first result"
-    command = "in Alarm app, find 'Contact us' button"
+    command = "in Alarm app, click start button in timer option"
     device = None
     provider = "GoogleGenAI"
     model = "models/gemini-2.5-flash"
@@ -830,4 +830,4 @@ if __name__ == "__main__":
     use_tcp = False
     base_url = None
     api_base = None
-    asyncio.run(run_command(command, reasoning=True))
+    asyncio.run(run_command(command, reasoning=False))

@@ -440,6 +440,12 @@ class CodeActAgent(Workflow):
             # Update remembered info
             self.remembered_info = self.shared_state.fast_memory
 
+            # Record action in shared state
+            self.shared_state.action_history.append({"code": code})
+            self.shared_state.summary_history.append(str(result))
+            # Assume success if no exception was thrown, or parse from result if possible
+            self.shared_state.action_outcomes.append(True)
+
             event = CodeActOutputEvent(output=str(result))
             ctx.write_event_to_stream(event)
             return event

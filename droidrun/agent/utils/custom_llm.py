@@ -35,14 +35,11 @@ class SimpleCustomLLM(CustomLLM):
 
     def complete(self, prompt: str, **kwargs: Any) -> CompletionResponse:
         try:
-            # Prepare Headers
             headers = {"Content-Type": "application/json"}
             if self.api_key:
                 headers["Authorization"] = f"Bearer {self.api_key}"
 
-            # Prepare Payload
             if self.prompt_key == "messages":
-                # Special handling for OpenAI-like local formats
                 payload = {
                     "model": self.model_name,
                     "messages": [{"role": "user", "content": prompt}]
@@ -50,7 +47,6 @@ class SimpleCustomLLM(CustomLLM):
             else:
                 payload = {self.prompt_key: prompt}
             
-            # Merge additional model parameters (temperature, max_tokens, etc.)
             payload.update(kwargs)
             
             logger.debug(f"Calling Custom API: {self.api_url}")
@@ -59,7 +55,6 @@ class SimpleCustomLLM(CustomLLM):
             
             data = response.json()
             
-            # Precise parsing of nested keys and list indices
             text = data
             for key in self.response_key.split('.'):
                 if isinstance(text, dict):

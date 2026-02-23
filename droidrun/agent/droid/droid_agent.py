@@ -7,10 +7,11 @@ Architecture:
 - When reasoning=True: Uses Manager (planning) + Executor (action) workflows
 """
 
+import json
 import logging
 import os
 import traceback
-from typing import TYPE_CHECKING, Awaitable, Type, Union
+from typing import TYPE_CHECKING, Any, Awaitable, Type, Union
 
 from async_adbutils import adb
 from llama_index.core.llms.llm import LLM
@@ -928,7 +929,65 @@ class DroidAgent(Workflow):
             except Exception as e:
                 logger.warning(f"Failed to capture final screenshot: {e}")
 
+        # Save action result history
+        self._save_action_results(ev)
+
         return result
+
+    def _save_action_results(self, ev: FinalizeEvent):
+        """Save action history to result file."""
+        try:
+            # Build history list
+            history = []
+            
+            # Use max length of histories to ensure we get everything
+            num_actions = max(
+                len(self.shared_state.action_history),
+                len(self.shared_state.summary_history),
+                len(self.shared_state.action_outcomes)
+            )
+            
+            for i in range(num_actions):
+                # Safely get items from lists, falling back to defaults if lists are uneven
+                action = self.shared_state.action_history[i] if i < len(self.shared_state.action_history) else {}
+                outcome = self.shared_state.action_outcomes[i] if i < len(self.shared_state.action_outcomes) else False
+                summary = self.shared_state.summary_history[i] if i < len(self.shared_state.summary_history) else ""
+                error = self.shared_state.error_descriptions[i] if i < len(self.shared_state.error_descriptions) else ""
+
+                history.append({
+                    "step": i + 1,
+                    "action": action,
+                    "outcome": outcome,
+                    "summary": summary,
+                    "error": error
+                })
+
+            result_data = {
+                "instruction": self.shared_state.instruction,
+                "success": ev.success,
+                "final_reason": ev.reason,
+                "total_steps": self.shared_state.step_number,
+                "history": history
+            }
+
+            # Determine output directory
+            output_dir = self.shared_state.output_dir
+            if not output_dir:
+                # Default to a generic output directory if none is set
+                output_dir = os.path.join(os.getcwd(), "output", "runs")
+                os.makedirs(output_dir, exist_ok=True)
+            
+            output_file = os.path.join(output_dir, "action_result.json")
+            
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(result_data, f, indent=2, ensure_ascii=False)
+            
+            logger.info(f"💾 Action history saved to: {output_file}")
+            
+        except Exception as e:
+            logger.error(f"Failed to save action result history: {e}")
+            if self.config.logging.debug:
+                 logger.error(traceback.format_exc())
 
     # ========================================================================
     # Event streaming

@@ -398,11 +398,19 @@ class FastAgent(Workflow):
                 action_result = await self.registry.execute(
                     call.name, call.parameters, self.action_ctx, workflow_ctx=ctx
                 )
+
+            # Record action in shared state
+            action_dict = {"action": call.name}
+            action_dict.update(call.parameters)
+            self.shared_state.action_history.append(action_dict)
+            self.shared_state.summary_history.append(action_result.summary if not call.error else f"Invalid arguments: {call.error}")
+            self.shared_state.action_outcomes.append(action_result.success if not call.error else False)
+
             results.append(
                 ToolResult(
                     name=call.name,
-                    output=action_result.summary,
-                    is_error=not action_result.success,
+                    output=action_result.summary if not call.error else f"Invalid arguments: {call.error}",
+                    is_error=not action_result.success if not call.error else True,
                 )
             )
 

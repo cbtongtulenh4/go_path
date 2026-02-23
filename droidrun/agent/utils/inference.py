@@ -39,35 +39,35 @@ async def acall_with_retries(
     """
     last_exception: Optional[Exception] = None
 
-    # DEBUG: Pretty print the prompt for tracking
-    print("\n" + "🚀" * 10 + " LLM PROMPT START " + "🚀" * 10)
-    for i, msg in enumerate(messages):
-        role = "UNKNOWN"
-        content = ""
+    # # DEBUG: Pretty print the prompt for tracking
+    # print("\n" + "🚀" * 10 + " LLM PROMPT START " + "🚀" * 10)
+    # for i, msg in enumerate(messages):
+    #     role = "UNKNOWN"
+    #     content = ""
         
-        # Handle different message formats (ChatMessage objects or dicts)
-        if hasattr(msg, 'role'):
-            role = msg.role.value if hasattr(msg.role, 'value') else str(msg.role)
-            content = msg.content
-        elif isinstance(msg, dict):
-            role = msg.get('role', 'UNKNOWN').upper()
-            content = msg.get('content', '')
+    #     # Handle different message formats (ChatMessage objects or dicts)
+    #     if hasattr(msg, 'role'):
+    #         role = msg.role.value if hasattr(msg.role, 'value') else str(msg.role)
+    #         content = msg.content
+    #     elif isinstance(msg, dict):
+    #         role = msg.get('role', 'UNKNOWN').upper()
+    #         content = msg.get('content', '')
 
-        print(f"\n--- [MESSAGE {i}] Role: {role} ---")
+    #     print(f"\n--- [MESSAGE {i}] Role: {role} ---")
         
-        if isinstance(content, list):
-            for item in content:
-                if isinstance(item, dict):
-                    if 'text' in item:
-                        print(item['text'])
-                    if 'image' in item:
-                        print("[IMAGE ATTACHED]")
-                else:
-                    print(str(item))
-        else:
-            print(str(content))
+    #     if isinstance(content, list):
+    #         for item in content:
+    #             if isinstance(item, dict):
+    #                 if 'text' in item:
+    #                     print(item['text'])
+    #                 if 'image' in item:
+    #                     print("[IMAGE ATTACHED]")
+    #             else:
+    #                 print(str(item))
+    #     else:
+    #         print(str(content))
             
-    print("\n" + "🚀" * 10 + " LLM PROMPT END " + "🚀" * 10 + "\n")
+    # print("\n" + "🚀" * 10 + " LLM PROMPT END " + "🚀" * 10 + "\n")
 
     for attempt in range(1, retries + 1):
         try:
