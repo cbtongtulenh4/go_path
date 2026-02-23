@@ -187,45 +187,56 @@ async def run_command(
             f"Executor={config.agent.executor.vision}, FastAgent={config.agent.fast_agent.vision}"
         )
 
-
-
         # Build DroidAgent kwargs for LLM loading
         droid_agent_kwargs = {"runtype": "cli"}
         
-        # Force GroqSDK for all agents as requested
-        logger.info("🧠 Using GroqSDK (openai/gpt-oss-120b) for all agents")
+        # # Force GroqSDK for all agents as requested
+        # logger.info("🧠 Using GroqSDK (openai/gpt-oss-120b) for all agents")
+        # llm_kwargs = {
+        #     "temperature": temperature if temperature is not None else 1.0,
+        #     "max_completion_tokens": 8192,
+        #     "reasoning_effort": "medium"
+        # }
+        # # Add any other kwargs passed from CLI
+        # llm_kwargs.update(kwargs)
+        
+        # llm = load_llm("GroqSDK", model="openai/gpt-oss-120b", **llm_kwargs)
+
         llm_kwargs = {
             "temperature": temperature if temperature is not None else 1.0,
             "max_completion_tokens": 8192,
-            "reasoning_effort": "medium"
+            "reasoning_effort": "medium",
+            "api_url": "https://api.groq.com/openai/v1/chat/completions",
+            "api_key": "",
+            "prompt_key": "messages",
+            "response_key": "choices.0.message.content",
+            "top_p": 1
         }
-        # Add any other kwargs passed from CLI
         llm_kwargs.update(kwargs)
         
-        llm = load_llm("GroqSDK", model="openai/gpt-oss-120b", **llm_kwargs)
+        llm = load_llm("CustomAPI", model="openai/gpt-oss-120b", **llm_kwargs)
 
-        if True: # Always attempt version check on Android
-            try:
-                device_obj = await adb.device(config.device.serial)
-                if device_obj:
-                    portal_version = await get_portal_version(device_obj)
+        try:
+            device_obj = await adb.device(config.device.serial)
+            if device_obj:
+                portal_version = await get_portal_version(device_obj)
 
-                    if not portal_version or portal_version < "0.4.1":
-                        logger.warning(
-                            f"⚠️  Portal version {portal_version} is outdated"
-                        )
-                        console.print(
-                            f"\n[yellow]Portal version {portal_version} < 0.4.1. Running setup...[/]\n"
-                        )
+                if not portal_version or portal_version < "0.4.1":
+                    logger.warning(
+                        f"⚠️  Portal version {portal_version} is outdated"
+                    )
+                    console.print(
+                        f"\n[yellow]Portal version {portal_version} < 0.4.1. Running setup...[/]\n"
+                    )
 
-                        await _setup_portal(
-                            path=None, device=config.device.serial, debug=debug_mode
-                        )
+                    await _setup_portal(
+                        path=None, device=config.device.serial, debug=debug_mode
+                    )
 
-                else:
-                    logger.debug("Could not get portal version, skipping check")
-            except Exception as e:
-                logger.warning(f"Version check failed: {e}")
+            else:
+                logger.debug("Could not get portal version, skipping check")
+        except Exception as e:
+            logger.warning(f"Version check failed: {e}")
 
         droid_agent = DroidAgent(
             goal=command,

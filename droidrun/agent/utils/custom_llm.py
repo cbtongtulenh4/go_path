@@ -1,6 +1,7 @@
+import asyncio
 import logging
 import requests
-from typing import Any, List, Optional
+from typing import Any, List, Optional, AsyncGenerator
 from llama_index.core.llms import (
     CustomLLM,
     CompletionResponse,
@@ -19,9 +20,10 @@ class SimpleCustomLLM(CustomLLM):
     A simple wrapper for custom APIs that take a prompt and return text.
     """
     api_url: str = Field(description="The endpoint URL of the custom API")
+    api_key: Optional[str] = Field(default=None, description="Optional API Key for Authorization header")
     model_name: str = Field(default="custom-api-model", description="The name of the model")
-    prompt_key: str = Field(default="prompt", description="The JSON key for the prompt in the request")
-    response_key: str = Field(default="text", description="The JSON key for the response text in the API response")
+    prompt_key: str = Field(default="prompt", description="The JSON key for the prompt. If set to 'messages', it will wrap the prompt in OpenAI format.")
+    response_key: str = Field(default="text", description="The JSON key for the response text. Supports dots for nesting and numbers for indices (e.g., 'choices.0.message.content')")
 
     @property
     def metadata(self) -> LLMMetadata:
@@ -33,20 +35,38 @@ class SimpleCustomLLM(CustomLLM):
 
     def complete(self, prompt: str, **kwargs: Any) -> CompletionResponse:
         try:
-            payload = {self.prompt_key: prompt}
-            # Add any extra kwargs to payload if needed
+            # Prepare Headers
+            headers = {"Content-Type": "application/json"}
+            if self.api_key:
+                headers["Authorization"] = f"Bearer {self.api_key}"
+
+            # Prepare Payload
+            if self.prompt_key == "messages":
+                # Special handling for OpenAI-like local formats
+                payload = {
+                    "model": self.model_name,
+                    "messages": [{"role": "user", "content": prompt}]
+                }
+            else:
+                payload = {self.prompt_key: prompt}
+            
+            # Merge additional model parameters (temperature, max_tokens, etc.)
             payload.update(kwargs)
             
-            logger.debug(f"Calling Custom API: {self.api_url} with prompt length {len(prompt)}")
-            response = requests.post(self.api_url, json=payload, timeout=60)
+            logger.debug(f"Calling Custom API: {self.api_url}")
+            response = requests.post(self.api_url, json=payload, headers=headers, timeout=60)
             response.raise_for_status()
             
             data = response.json()
-            # Handle potential nested keys if response_key contains dots
+            
+            # Precise parsing of nested keys and list indices
             text = data
             for key in self.response_key.split('.'):
                 if isinstance(text, dict):
                     text = text.get(key, "")
+                elif isinstance(text, list) and key.isdigit():
+                    idx = int(key)
+                    text = text[idx] if idx < len(text) else ""
                 else:
                     break
             
@@ -73,11 +93,54 @@ class SimpleCustomLLM(CustomLLM):
             raw=completion
         )
 
-    def stream_complete(self, prompt: str, **kwargs: Any) -> CompletionResponseGen:
-        raise NotImplementedError("Streaming is not supported for SimpleCustomLLM")
+    async def acomplete(self, prompt: str, **kwargs: Any) -> CompletionResponse:
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, lambda: self.complete(prompt, **kwargs))
 
-    def stream_chat(self, messages: List[ChatMessage], **kwargs: Any):
-        raise NotImplementedError("Streaming is not supported for SimpleCustomLLM")
+    async def achat(self, messages: List[ChatMessage], **kwargs: Any) -> ChatResponse:
+        # Convert chat messages to a single flattened prompt
+        flattened_prompt = ""
+        for msg in messages:
+            role = msg.role.value if hasattr(msg.role, 'value') else str(msg.role)
+            flattened_prompt += f"{role.upper()}: {msg.content}\n"
+        
+        # Append assistant trigger
+        if not flattened_prompt.strip().endswith("ASSISTANT:"):
+            flattened_prompt += "ASSISTANT: "
+            
+        completion = await self.acomplete(flattened_prompt, **kwargs)
+        return ChatResponse(
+            message=ChatMessage(role="assistant", content=completion.text),
+            raw=completion
+        )
+
+    def stream_complete(self, prompt: str, **kwargs: Any) -> CompletionResponseGen:
+        response = self.complete(prompt, **kwargs)
+        yield CompletionResponse(text=response.text, delta=response.text, raw=response.raw)
+
+    def stream_chat(self, messages: List[ChatMessage], **kwargs: Any) -> Any:
+        response = self.chat(messages, **kwargs)
+        yield ChatResponse(
+            message=response.message,
+            delta=response.message.content,
+            raw=response.raw
+        )
+
+    async def astream_chat(self, messages: List[ChatMessage], **kwargs: Any) -> AsyncGenerator[ChatResponse, None]:
+        response = await self.achat(messages, **kwargs)
+        yield ChatResponse(
+            message=response.message,
+            delta=response.message.content,
+            raw=response.raw
+        )
+
+    async def astream_complete(self, prompt: str, **kwargs: Any) -> AsyncGenerator[CompletionResponse, None]:
+        response = await self.acomplete(prompt, **kwargs)
+        yield CompletionResponse(
+            text=response.text,
+            delta=response.text,
+            raw=response.raw
+        )
 
 class GroqSDKLLM(CustomLLM):
     """
@@ -115,7 +178,7 @@ class GroqSDKLLM(CustomLLM):
             "temperature": kwargs.get("temperature", self.temperature),
             "stream": kwargs.get("stream", False),
         }
-        
+
         # Add optional params
         if self.max_tokens: params["max_completion_tokens"] = self.max_tokens
         if self.reasoning_effort: params["reasoning_effort"] = self.reasoning_effort

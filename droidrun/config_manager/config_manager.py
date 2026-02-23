@@ -123,10 +123,6 @@ class DeviceConfig:
     use_tcp: bool = False
     platform: str = "android"  # "android" or "ios"
 
-
-
-
-
 @dataclass
 class LoggingConfig:
     """Logging configuration."""
