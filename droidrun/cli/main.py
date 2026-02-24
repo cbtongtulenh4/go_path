@@ -207,7 +207,7 @@ async def run_command(
             "max_completion_tokens": 8192,
             "reasoning_effort": "medium",
             "api_url": "https://api.groq.com/openai/v1/chat/completions",
-            "api_key": "",
+            "api_key": "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",#"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",
             "prompt_key": "messages",
             "response_key": "choices.0.message.content",
             "top_p": 1
