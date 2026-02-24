@@ -111,22 +111,6 @@ async def run_command(
     """
     config = ConfigLoader.load(config_path)
 
-    # Print cloud link in a box
-    if config.logging.rich_text:
-        cloud_text = Text()
-        cloud_text.append("✨ Try DroidRun Cloud: ", style="bold cyan")
-        cloud_text.append(
-            "https://cloud.droidrun.ai/sign-in", style="bold blue underline"
-        )
-        cloud_panel = Panel(
-            cloud_text,
-            border_style="cyan",
-            padding=(0, 1),
-        )
-        console.print(cloud_panel)
-    else:
-        console.print("\n✨ Try DroidRun Cloud: https://cloud.droidrun.ai/sign-in\n")
-
     # Initialize logging
     debug_mode = True#debug if debug is not None else config.logging.debug
     _setup_cli_logging(debug_mode)
@@ -207,7 +191,7 @@ async def run_command(
             "max_completion_tokens": 8192,
             "reasoning_effort": "medium",
             "api_url": "https://api.groq.com/openai/v1/chat/completions",
-            "api_key": "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",#"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",
+            "api_key": "",
             "prompt_key": "messages",
             "response_key": "choices.0.message.content",
             "top_p": 1

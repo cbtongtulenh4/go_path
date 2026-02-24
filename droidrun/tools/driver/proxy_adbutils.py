@@ -1,5 +1,3 @@
-"""Proxy ADB Utilities - Replaces async_adbutils with Remote PC Agent calls via WebSockets."""
-
 import os
 import base64
 from typing import List, Optional
@@ -22,12 +20,10 @@ class ProxyAdbDevice:
         with open(path, "rb") as f:
             b64_content = base64.b64encode(f.read()).decode("utf-8")
             
-        # PC agent saves it locally to the same filename in its working dir
         remote_path = f"temp_install_{os.path.basename(path)}"
         await self.driver._send_command_to_agent("push_file_b64", {"path": remote_path, "b64_content": b64_content})
         
         grant = flags is not None and "-g" in flags
-        # Call the actual install_app command on the agent
         res = await self.driver._send_command_to_agent("install_app", {"path": remote_path, "reinstall": uninstall, "grant_permissions": grant})
         return res.get("msg", "")
 
@@ -35,22 +31,43 @@ class ProxyAdbDevice:
         res = await self.driver._send_command_to_agent("list_packages", {})
         return res.get("packages", [])
 
-# Alias for type hinting
+    async def forward_port(self, remote_port: int, local_port: Optional[int] = None) -> int:
+        """Forward a local port to a remote port."""
+        res = await self.driver._send_command_to_agent("forward_port", {"remote_port": remote_port, "local_port": local_port})
+        if "error" in res:
+            raise Exception(res["error"])
+        return res.get("local_port", 0)
+
+    async def forward_list(self):
+        """List active forwards."""
+        res = await self.driver._send_command_to_agent("forward_list", {})
+        
+        class ForwardItem:
+            def __init__(self, serial, local, remote):
+                self.serial = serial
+                self.local = local
+                self.remote = remote
+                
+        forws = res.get("forwards", [])
+        for f in forws:
+            yield ForwardItem(f["serial"], f["local"], f["remote"])
+
+    async def screenshot_bytes(self) -> bytes:
+        """Take screenshot and return bytes."""
+        return await self.driver.screenshot(hide_overlay=True)
+
 AdbDevice = ProxyAdbDevice
 
+
 class MockDeviceObj:
-    """Simple wrapper for list_devices output."""
     def __init__(self, serial: str):
         self.serial = serial
 
 
 class ProxyAdb:
-    """Mock adb module."""
 
     async def device(self, serial: Optional[str] = None) -> ProxyAdbDevice | None:
-        """Returns a ProxyAdbDevice."""
         if serial is None:
-            # Get the first available device from list
             devices = await self.list()
             if not devices:
                 return None
@@ -59,25 +76,19 @@ class ProxyAdb:
         return ProxyAdbDevice(serial)
 
     async def list(self) -> List[MockDeviceObj]:
-        """Returns list of MockDeviceObj."""
-        # Use a dummy driver to route the global command
         driver = AndroidDriver(serial="dummy")
         res = await driver._send_command_to_agent("list_devices", {})
-        # PC agent returns: [{"device_id": ..., "name": ...}, ...]
         devices = res.get("devices", [])
         return [MockDeviceObj(d["device_id"]) for d in devices]
 
     async def connect(self, serial: str) -> str:
-        """Connect ADB."""
         driver = AndroidDriver(serial="dummy")
         res = await driver._send_command_to_agent("adb_connect", {"serial": serial})
         return res.get("msg", "")
 
     async def disconnect(self, serial: str, raise_error: bool = False) -> bool:
-        """Disconnect ADB."""
         driver = AndroidDriver(serial="dummy")
         res = await driver._send_command_to_agent("adb_disconnect", {"serial": serial})
-        # If no error in msg, return True
         msg = res.get("msg", "")
         return not msg.startswith("Error")
 

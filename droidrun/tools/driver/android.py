@@ -20,7 +20,6 @@ from droidrun.tools.driver.base import DeviceDriver
 
 logger = logging.getLogger("droidrun")
 
-# Ideally passed via environment or config, hardcoding default for now
 HEALING_SERVER_WS_URL = os.environ.get("HEALING_SERVER_WS_URL", "ws://localhost:8765/ws/agent/control")
 
 
@@ -45,8 +44,8 @@ class AndroidDriver(DeviceDriver):
     def __init__(
         self,
         serial: str | None = None,
-        use_tcp: bool = False, # deprecated for this agent
-        remote_tcp_port: int = 8080, # deprecated for this agent
+        use_tcp: bool = False,
+        remote_tcp_port: int = 8080, 
     ) -> None:
         self._serial = serial
         self._use_tcp = use_tcp
@@ -54,8 +53,6 @@ class AndroidDriver(DeviceDriver):
         self._ws: websockets.WebSocketClientProtocol | None = None
         self._connected = False
         
-        # We need a client ID or agent ID to communicate.
-        # Healing server expects an agent_id to route commands.
         self._agent_id = os.environ.get("AGENT_ID", "default_agent") 
         self._pending_results: Dict[str, asyncio.Future] = {}
         self._listen_task = None
@@ -67,18 +64,7 @@ class AndroidDriver(DeviceDriver):
             return
 
         logger.info(f"Connecting to Healing Server at {HEALING_SERVER_WS_URL} for device {self._serial}")
-        self._ws = await websockets.connect(HEALING_SERVER_WS_URL, ping_interval=None)
-        
-        # Register as a special client/agent so the server can route our commands
-        # In the context of Odin Healing, we will act as the server sending to a specific agent,
-        # but since Droidrun is generic, we pretend to be an agent registering itself or sending commands.
-        # Actually, Healing Server allows any WS client to send "request_run", but that runs a test.
-        # It's better to just send direct commands formatted properly for the ServerController to pass to the agent.
-        # Since we just need to send JSON to the agent, we can implement a custom route or 
-        # spoof being the server. Wait, DroidRun is meant to be called by the Server. 
-        # If DroidRun is running inside the Server, we shouldn't use WS but direct function calls.
-        # If DroidRun is an EXE, we need WS. We will send the messages directly to the server, 
-        # and we need the server to forward them.
+        self._ws = await websockets.connect(HEALING_SERVER_WS_URL, ping_interval=None)  
         
         self._listen_task = asyncio.create_task(self._listen_loop())
         self._connected = True
@@ -100,21 +86,9 @@ class AndroidDriver(DeviceDriver):
     async def _send_command_to_agent(self, cmd_type: str, payload: dict) -> Any:
         await self.ensure_connected()
         cmd_id = str(uuid.uuid4())
-        
-        # Create a command to be forwarded to the PC Agent
-        # Warning: For this to work seamlessly, Healing Server's websocket handler might need to support "forward_command"
-        # However, for now, we structure the payload as if we are directly sending it, and rely on the Server
-        # routing it. (A simple implementation is that DroidRun's WS connects and sends commands).
-        # We will wrap it in a pseudo "forward_command" or directly send if the server forwards all unknown or specific.
-        # Without modifying the server again, we can just send the command.
-        
         payload["type"] = cmd_type
         payload["command_id"] = cmd_id
         payload["device_id"] = self._serial
-        
-        # Special envelope to ask the Server to route it to `self._agent_id`
-        # In a real setup, you'd add this to server_controller.py. 
-        # For our architecture, let's assume the ServerController handles 'forward_to_agent'
         request = {
             "type": "forward_to_agent",
             "agent_id": self._agent_id,
@@ -140,11 +114,6 @@ class AndroidDriver(DeviceDriver):
     # -- input actions -------------------------------------------------------
 
     async def tap(self, x: int, y: int) -> None:
-        # Note: Droidrun passes absolute coordinates, but pc_agent expects ratios or handled x/y
-        # Healing agent expects 'x_ratio' and 'y_ratio'. Let's assume we send absolute as well.
-        # Alternatively, we can calculate ratio if we know width/height, but for simplicity we modify
-        # payload. If pc_agent only has x_ratio, we should just send x/y directly and update pc_agent.
-        # Let's send x and y directly into the payload.
         await self._send_command_to_agent("tap_absolute", {"x": x, "y": y})
 
     async def swipe(
@@ -196,9 +165,6 @@ class AndroidDriver(DeviceDriver):
     # -- state / observation -------------------------------------------------
 
     async def screenshot(self, hide_overlay: bool = True) -> bytes:
-        # The agent returns a path on its local machine. We need the actual bytes.
-        # We'll use dump_hierarchy / take_screenshot.
-        # We should ask the agent to base64 encode the screenshot and send it back.
         res = await self._send_command_to_agent("take_screenshot_b64", {})
         if "b64" in res:
             return base64.b64decode(res["b64"])
