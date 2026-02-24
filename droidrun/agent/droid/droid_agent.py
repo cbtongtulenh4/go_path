@@ -13,7 +13,7 @@ import os
 import traceback
 from typing import TYPE_CHECKING, Any, Awaitable, Type, Union
 
-from async_adbutils import adb
+from droidrun.tools.driver.proxy_adbutils import adb
 from llama_index.core.llms.llm import LLM
 from llama_index.core.workflow import Context, StartEvent, StopEvent, Workflow, step
 from pydantic import BaseModel

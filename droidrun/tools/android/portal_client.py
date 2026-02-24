@@ -13,7 +13,7 @@ import re
 from typing import Any, Dict, List, Optional
 
 import httpx
-from async_adbutils import AdbDevice
+from droidrun.tools.driver.proxy_adbutils import AdbDevice
 
 logger = logging.getLogger("droidrun")
 

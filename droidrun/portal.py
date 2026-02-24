@@ -15,7 +15,7 @@ import requests
 from rich.console import Console
 
 from droidrun.tools.driver.android import AndroidDriver
-from async_adbutils import AdbDevice, adb
+from droidrun.tools.driver.proxy_adbutils import AdbDevice, adb
 
 REPO = "droidrun/droidrun-portal"
 ASSET_NAME = "droidrun-portal"
