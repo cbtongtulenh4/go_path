@@ -298,9 +298,18 @@ class CodeActAgent(Workflow):
             # Stream formatted state for trajectory
             ctx.write_event_to_stream(RecordUIStateEvent(ui_state=ui_state.elements))
 
-            # Add device state to last user message
+            # Clean up old device states and images from history to save tokens
+            for msg in self.shared_state.message_history:
+                if msg["role"] == "user":
+                    msg["content"] = [
+                        item for item in msg["content"]
+                        if ("text" not in item or "<device_dump>" not in item["text"]) 
+                        and "image" not in item
+                    ]
+
+            # Add device state to last user message wrapped in explicit tags
             self.shared_state.message_history[-1]["content"].append(
-                {"text": f"\n{ui_state.formatted_text}\n"}
+                {"text": f"\n<device_dump>\n{ui_state.formatted_text}\n</device_dump>\n"}
             )
 
         except DeviceDisconnectedError:

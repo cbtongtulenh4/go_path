@@ -96,16 +96,16 @@ class AndroidStateProvider(StateProvider):
                     self.tree_formatter.format(filtered, combined_data["phone_state"])
                 )
 
-                # DEBUG: Print current device state
-                print("\n" + "="*80)
-                print("📱 DEVICE DUMP (FORMATTED FOR AI)")
-                print("="*80)
-                print(f"Focused Text: {focused_text}")
-                print(f"Package: {phone_state.get('packageName', 'Unknown')}")
-                print(f"Activity: {phone_state.get('currentApp', 'Unknown')}")
-                print("-" * 80)
-                print(formatted_text)
-                print("="*80 + "\n")
+                # # DEBUG: Print current device state
+                # print("\n" + "="*80)
+                # print("📱 DEVICE DUMP (FORMATTED FOR AI)")
+                # print("="*80)
+                # print(f"Focused Text: {focused_text}")
+                # print(f"Package: {phone_state.get('packageName', 'Unknown')}")
+                # print(f"Activity: {phone_state.get('currentApp', 'Unknown')}")
+                # print("-" * 80)
+                # print(formatted_text)
+                # print("="*80 + "\n")
 
                 return self._ui_cls(
                     elements=elements,

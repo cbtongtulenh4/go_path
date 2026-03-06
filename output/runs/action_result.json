@@ -1,58 +1,50 @@
 {
-  "instruction": "in Alarm app, click start button in timer option",
+  "instruction": "# Context\nYou are in the Samsung Kids application.\nThe previous step clicked \"Profile\", but the UI has changed and the expected fields may not appear exactly as before.\nThe current screen is a password verification screen that appears before accessing the profile editing page.\n\n# Task with embedded stop checks\nFrom the current password verification screen, perform the following actions **but stop immediately if the corresponding gold element appears**:\n\n1. Pass or complete the password verification (PIN 008899).\n2. Check if the text field with text \"Kid's name\" is present; if yes, stop.\n3. Enter kid name \"test\".\n4. Check if the text field with text \"Date of birth\" is present; if yes, stop.\n5. Enter birthday \"01/01/2020\".\n6. Check if the button with text \"Save\" is present; if yes, stop.\n7. Save the profile.",
   "success": true,
-  "final_reason": "Timer started successfully",
-  "total_steps": 2,
+  "final_reason": "Stopped as required because the \"Kid's name\" field is already visible.",
+  "total_steps": 3,
   "history": [
     {
       "step": 1,
       "action": {
         "action": "click",
-        "index": 46
+        "index": 6
       },
       "outcome": true,
-      "summary": "Clicked on Text: 'Timer' | Class: LinearLayout | Type: unknown | Coordinates: (922, 2189)",
+      "summary": "Clicked on Text: 'Use PIN' | Class: Button | Type: unknown | Coordinates: (540, 1446)",
       "error": ""
     },
     {
       "step": 2,
       "action": {
-        "action": "wait",
-        "duration": 1.0
+        "action": "type",
+        "index": 7,
+        "text": "008899",
+        "clear": true
       },
       "outcome": true,
-      "summary": "Waited for 1.0 seconds",
+      "summary": "Sent text '008899' to Text: 'com.samsung.android.biometrics.app.setting:id/lockPassword' | Class: EditText | Type: unknown | Coordinates: (540, 698) (clear=True)",
       "error": ""
     },
     {
       "step": 3,
       "action": {
         "action": "click",
-        "index": 33
+        "index": 9
       },
       "outcome": true,
-      "summary": "Clicked on Text: 'Start' | Class: Button | Type: unknown | Coordinates: (539, 1911)",
+      "summary": "Clicked on Text: 'Continue' | Class: Button | Type: unknown | Coordinates: (810, 1321)",
       "error": ""
     },
     {
       "step": 4,
       "action": {
-        "action": "wait",
-        "duration": 0.5
-      },
-      "outcome": true,
-      "summary": "Waited for 0.5 seconds",
-      "error": ""
-    },
-    {
-      "step": 5,
-      "action": {
         "action": "complete",
         "success": true,
-        "message": "Timer started successfully"
+        "message": "Stopped as required because the \"Kid's name\" field is already visible."
       },
       "outcome": true,
-      "summary": "Timer started successfully",
+      "summary": "Stopped as required because the \"Kid's name\" field is already visible.",
       "error": ""
     }
   ]

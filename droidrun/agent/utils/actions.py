@@ -19,6 +19,40 @@ logger = logging.getLogger("droidrun")
 
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _get_element_description(index: int, ctx: "ActionContext") -> str:
+    """Helper to get a descriptive string for an element."""
+    if index == -1:
+        return "currently focused element"
+
+    try:
+        info = ctx.ui.get_element_info(index)
+        if not info:
+            return f"element at index {index}"
+
+        detail_parts = [
+            f"Text: '{info.get('text', 'No text')}'",
+            f"Class: {info.get('className', 'Unknown class')}",
+            f"Type: {info.get('type', 'unknown')}",
+        ]
+        if info.get("child_texts"):
+            detail_parts.append(f"Contains text: {' | '.join(info['child_texts'])}")
+
+        try:
+            x, y = ctx.ui.get_element_coords(index)
+            detail_parts.append(f"Coordinates: ({x}, {y})")
+        except Exception:
+            pass
+
+        return " | ".join(detail_parts)
+    except Exception:
+        return f"element at index {index}"
+
+
+# ---------------------------------------------------------------------------
 # Core UI actions
 # ---------------------------------------------------------------------------
 
@@ -29,19 +63,8 @@ async def click(index: int, *, ctx: "ActionContext") -> ActionResult:
         x, y = ctx.ui.get_element_coords(index)
         await ctx.driver.tap(x, y)
 
-        info = ctx.ui.get_element_info(index)
-        detail_parts = [
-            f"Text: '{info.get('text', 'No text')}'",
-            f"Class: {info.get('className', 'Unknown class')}",
-            f"Type: {info.get('type', 'unknown')}",
-        ]
-        if info.get("child_texts"):
-            detail_parts.append(f"Contains text: {' | '.join(info['child_texts'])}")
-        detail_parts.append(f"Coordinates: ({x}, {y})")
-
-        return ActionResult(
-            success=True, summary=f"Clicked on {' | '.join(detail_parts)}"
-        )
+        desc = _get_element_description(index, ctx)
+        return ActionResult(success=True, summary=f"Clicked on {desc}")
     except ValueError as e:
         return ActionResult(
             success=False, summary=f"Failed to click element at index {index}: {e}"
@@ -53,9 +76,9 @@ async def long_press(index: int, *, ctx: "ActionContext") -> ActionResult:
     try:
         x, y = ctx.ui.get_element_coords(index)
         await ctx.driver.swipe(x, y, x, y, 1000)
-        return ActionResult(
-            success=True, summary=f"Long pressed element at index {index} at ({x}, {y})"
-        )
+
+        desc = _get_element_description(index, ctx)
+        return ActionResult(success=True, summary=f"Long pressed on {desc}")
     except ValueError as e:
         return ActionResult(
             success=False, summary=f"Failed to long press element at index {index}: {e}"
@@ -111,8 +134,10 @@ async def type(
 
         success = await ctx.driver.input_text(text, clear)
         if success:
+            desc = _get_element_description(index, ctx)
             return ActionResult(
-                success=True, summary=f"Text typed successfully (clear={clear})"
+                success=True,
+                summary=f"Sent text '{text}' to {desc} (clear={clear})",
             )
         else:
             return ActionResult(
@@ -252,9 +277,10 @@ async def type_secret(
 
         ok = await ctx.driver.input_text(secret_value)
         if ok:
+            desc = _get_element_description(index, ctx)
             return ActionResult(
                 success=True,
-                summary=f"Successfully typed secret '{secret_id}' into element {index}",
+                summary=f"Successfully sent secret '{secret_id}' to {desc}",
             )
         else:
             return ActionResult(

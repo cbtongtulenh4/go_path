@@ -191,7 +191,7 @@ async def run_command(
             "max_completion_tokens": 8192,
             "reasoning_effort": "medium",
             "api_url": "https://api.groq.com/openai/v1/chat/completions",
-            "api_key": "",
+            "api_key": "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",
             "prompt_key": "messages",
             "response_key": "choices.0.message.content",
             "top_p": 1
@@ -802,6 +802,25 @@ if __name__ == "__main__":
     command = "open youtube and play a song by shakira"
     command = "use open_app to open the settings and search for the battery and enter the first result"
     command = "in Alarm app, click start button in timer option"
+    command = "Do pass password with input PIN 008899"
+    command = """Currently in the Samsung Kids app, after clicking the "profile" button, the app asks for a password. The goal is to bypass the password; stop when the "kid's name" button appears. (Note: The PIN is 008899)"""
+    command = """
+# Context
+You are in the Samsung Kids application.
+The previous step clicked "Profile", but the UI has changed and the expected fields may not appear exactly as before.
+The current screen is a password verification screen that appears before accessing the profile editing page.
+
+# Task with embedded stop checks
+From the current password verification screen, perform the following actions **but stop immediately if the corresponding gold element appears**:
+
+1. Pass or complete the password verification (PIN 008899).
+2. Check if the text field with text "Kid's name" is present; if yes, stop.
+3. Enter kid name "test".
+4. Check if the text field with text "Date of birth" is present; if yes, stop.
+5. Enter birthday "01/01/2020".
+6. Check if the button with text "Save" is present; if yes, stop.
+7. Save the profile. 
+""".strip()
     device = None
     provider = "GoogleGenAI"
     model = "models/gemini-2.5-flash"
